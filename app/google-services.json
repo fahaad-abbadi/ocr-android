@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "980004848368",
+    "project_id": "scanner-5bca2",
+    "storage_bucket": "scanner-5bca2.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:980004848368:android:d78f1b085582b840c1f835",
+        "android_client_info": {
+          "package_name": "com.example.boundingbox"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "980004848368-crd5hdt299csloq26bbipv81kt3c9rn3.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAyvY7E2EtbG6j-cEtnYpZRuaAIt5BOEUk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "980004848368-crd5hdt299csloq26bbipv81kt3c9rn3.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
