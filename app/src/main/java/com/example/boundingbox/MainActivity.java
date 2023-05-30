@@ -195,7 +195,6 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
                             @Override
                             public void onSuccess(FirebaseVisionText firebaseVisionText) {
                                 // Task completed successfully
-
                                 textView=findViewById(R.id.text);
                                 //getting decoded text
                                 String text=firebaseVisionText.getText();
