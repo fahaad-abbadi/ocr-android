@@ -60,7 +60,6 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
     /**
      *Responsible for converting the rotation degrees from CameraX into the one compatible with Firebase ML
      */
-
     private int degreesToFirebaseRotation(int degrees) {
         switch (degrees) {
             case 0:
@@ -92,9 +91,8 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
         holder = surfaceView.getHolder();
         holder.setFormat(PixelFormat.TRANSPARENT);
         holder.addCallback(this);
-
-
     }
+    
 
     /**
      * Starting Camera
@@ -102,7 +100,6 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
     void startCamera()
     {
         mCameraView = findViewById(R.id.previewView);
-
         cameraProviderFuture = ProcessCameraProvider.getInstance(this);
 
         cameraProviderFuture.addListener(new Runnable() {
@@ -152,11 +149,15 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
                 if (image == null || image.getImage() == null) {
                     return;
                 }
+                
                 //Getting a FirebaseVisionImage object using the Image object and rotationDegrees
                 final Image mediaImage = image.getImage();
                 FirebaseVisionImage images = FirebaseVisionImage.fromMediaImage(mediaImage, rotationDegrees);
+                
+                
                 //Getting bitmap from FirebaseVisionImage Object
                 Bitmap bmp=images.getBitmap();
+                
                 //Getting the values for cropping
                 DisplayMetrics displaymetrics = new DisplayMetrics();
                 getWindowManager().getDefaultDisplay().getMetrics(displaymetrics);
@@ -183,9 +184,11 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
 
                 //Creating new cropped bitmap
                 Bitmap bitmap = Bitmap.createBitmap(bmp, left, top, right - left, bottom - top);
+                
                 //initializing FirebaseVisionTextRecognizer object
                 FirebaseVisionTextRecognizer detector = FirebaseVision.getInstance()
                         .getOnDeviceTextRecognizer();
+                
                 //Passing FirebaseVisionImage Object created from the cropped bitmap
                 Task<FirebaseVisionText> result =  detector.processImage(FirebaseVisionImage.fromBitmap(bitmap))
                         .addOnSuccessListener(new OnSuccessListener<FirebaseVisionText>() {
@@ -198,6 +201,8 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
                                 String text=firebaseVisionText.getText();
                                 //Setting the decoded text in the texttview
                                 textView.setText(text);
+                                
+                                
                                 //for getting blocks and line elements
                                 for (FirebaseVisionText.TextBlock block: firebaseVisionText.getTextBlocks()) {
                                     String blockText = block.getText();
@@ -230,19 +235,6 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
     }
 
 
-//    private void requestPermissionForCameraMicrophoneAndBluetooth() {
-//        String[] permissionsList;
-//        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S)
-//        {
-//            permissionsList = new String[] { Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO, Manifest.permission.BLUETOOTH_CONNECT };
-//        } else {
-//            permissionsList = new String[] {Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO};
-//        }
-//
-//        requestPermissions(permissionsList);
-//    }
-
-
     /**
      *
      * For drawing the rectangular box
@@ -252,9 +244,6 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
         getWindowManager().getDefaultDisplay().getMetrics(displaymetrics);
         int height = mCameraView.getHeight();
         int width = mCameraView.getWidth();
-
-        //cameraHeight = height;
-        //cameraWidth = width;
 
         int left, right, top, bottom, diameter;
 
@@ -268,6 +257,7 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
 
         canvas = holder.lockCanvas();
         canvas.drawColor(0, PorterDuff.Mode.CLEAR);
+        
         //border's properties
         paint = new Paint();
         paint.setStyle(Paint.Style.STROKE);
@@ -283,6 +273,7 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
         yOffset = top;
         boxHeight = bottom - top;
         boxWidth = right - left;
+        
         //Changing the value of x in diameter/x will change the size of the box ; inversely proportionate to x
         canvas.drawRect(left, top, right, bottom, paint);
         holder.unlockCanvasAndPost(canvas);
