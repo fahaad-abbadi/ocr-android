@@ -3,6 +3,8 @@ package com.example.boundingbox;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.camera.core.Camera;
+import androidx.camera.core.CameraControl;
+import androidx.camera.core.CameraInfo;
 import androidx.camera.core.CameraSelector;
 import androidx.camera.core.ImageAnalysis;
 import androidx.camera.core.ImageProxy;
@@ -27,6 +29,8 @@ import android.util.Log;
 import android.util.Size;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
+import android.view.View;
+import android.widget.Button;
 import android.widget.TextView;
 
 import com.google.android.gms.tasks.OnFailureListener;
@@ -51,12 +55,11 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
     SurfaceView surfaceView;
     Canvas canvas;
     Paint paint;
-
     int cameraHeight, cameraWidth, xOffset, yOffset, boxWidth, boxHeight;
 
     private ListenableFuture<ProcessCameraProvider> cameraProviderFuture;
     private ExecutorService executor = Executors.newSingleThreadExecutor();
-//    private static final int MY_CAMERA_REQUEST_CODE = 100;
+    private static final int MY_CAMERA_REQUEST_CODE = 100;
 
     /**
      *Responsible for converting the rotation degrees from CameraX into the one compatible with Firebase ML
@@ -73,7 +76,8 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
             case 270:
                 return FirebaseVisionImageMetadata.ROTATION_270;
             default:
-                throw new IllegalArgumentException("Rotation must be 0, 90, 180, or 270.");
+                throw new IllegalArgumentException(
+                        "Rotation must be 0, 90, 180, or 270.");
         }
     }
 
@@ -100,6 +104,7 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
     void startCamera()
     {
         mCameraView = findViewById(R.id.previewView);
+
         cameraProviderFuture = ProcessCameraProvider.getInstance(this);
 
         cameraProviderFuture.addListener(new Runnable() {
@@ -108,12 +113,44 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
                 try {
                     ProcessCameraProvider cameraProvider = cameraProviderFuture.get();
                     MainActivity.this.bindPreview(cameraProvider);
+                    setupZoomFunctionality(cameraProvider);
                 } catch (ExecutionException | InterruptedException e) {
                     // No errors need to be handled for this Future.
                     // This should never be reached.
                 }
             }
         }, ContextCompat.getMainExecutor(this));
+    }
+
+    private void setupZoomFunctionality(ProcessCameraProvider cameraProvider) {
+        CameraSelector cameraSelector = new CameraSelector.Builder()
+                .requireLensFacing(CameraSelector.LENS_FACING_BACK)
+                .build();
+
+        Camera camera = cameraProvider.bindToLifecycle(this, cameraSelector);
+        CameraControl cameraControl = camera.getCameraControl();
+        CameraInfo cameraInfo = camera.getCameraInfo();
+
+        Button zoomInButton = findViewById(R.id.zoomInButton);
+        Button zoomOutButton = findViewById(R.id.zoomOutButton);
+
+        zoomInButton.setOnClickListener(v -> {
+            float maxZoom = cameraInfo.getZoomState().getValue().getMaxZoomRatio();
+            float zoom = cameraInfo.getZoomState().getValue().getZoomRatio();
+            if (zoom < maxZoom) {
+                zoom += 0.2f;
+                cameraControl.setZoomRatio(zoom);
+            }
+        });
+
+        zoomOutButton.setOnClickListener(v -> {
+            float zoom = cameraInfo.getZoomState().getValue().getZoomRatio();
+            if (zoom > 1.0f) {
+                zoom -= 0.2f;
+                cameraControl.setZoomRatio(zoom);
+            }
+        });
+
     }
 
     /**
@@ -144,25 +181,19 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
             @Override
             @androidx.camera.core.ExperimentalGetImage
             public void analyze(@NonNull ImageProxy image) {
-
                 //changing normal degrees into Firebase rotation
                 int rotationDegrees = degreesToFirebaseRotation(image.getImageInfo().getRotationDegrees());
-
                 if (image == null || image.getImage() == null) {
                     return;
                 }
-
                 //Getting a FirebaseVisionImage object using the Image object and rotationDegrees
                 final Image mediaImage = image.getImage();
                 FirebaseVisionImage images = FirebaseVisionImage.fromMediaImage(mediaImage, rotationDegrees);
-
                 //Getting bitmap from FirebaseVisionImage Object
                 Bitmap bmp=images.getBitmap();
-
                 //Getting the values for cropping
                 DisplayMetrics displaymetrics = new DisplayMetrics();
                 getWindowManager().getDefaultDisplay().getMetrics(displaymetrics);
-
                 int height = bmp.getHeight();
                 int width = bmp.getWidth();
 
@@ -186,25 +217,21 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
 
                 //Creating new cropped bitmap
                 Bitmap bitmap = Bitmap.createBitmap(bmp, left, top, right - left, bottom - top);
-
                 //initializing FirebaseVisionTextRecognizer object
                 FirebaseVisionTextRecognizer detector = FirebaseVision.getInstance()
                         .getOnDeviceTextRecognizer();
-
                 //Passing FirebaseVisionImage Object created from the cropped bitmap
                 Task<FirebaseVisionText> result =  detector.processImage(FirebaseVisionImage.fromBitmap(bitmap))
                         .addOnSuccessListener(new OnSuccessListener<FirebaseVisionText>() {
                             @Override
                             public void onSuccess(FirebaseVisionText firebaseVisionText) {
                                 // Task completed successfully
-                                textView=findViewById(R.id.text);
 
+                                textView=findViewById(R.id.text);
                                 //getting decoded text
                                 String text=firebaseVisionText.getText();
-
                                 //Setting the decoded text in the texttview
                                 textView.setText(text);
-
                                 //for getting blocks and line elements
                                 for (FirebaseVisionText.TextBlock block: firebaseVisionText.getTextBlocks()) {
                                     String blockText = block.getText();
@@ -212,6 +239,7 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
                                         String lineText = line.getText();
                                         for (FirebaseVisionText.Element element: line.getElements()) {
                                             String elementText = element.getText();
+
                                         }
                                     }
                                 }
@@ -232,10 +260,21 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
 
 
         });
-
-//        The code binds the camera to the lifecycle of a component and sets up image analysis and preview functionalities for the selected camera. In other words, The code makes the camera work with the app and shows pictures on the screen.
         Camera camera = cameraProvider.bindToLifecycle((LifecycleOwner)this, cameraSelector, imageAnalysis,preview);
     }
+
+
+//    private void requestPermissionForCameraMicrophoneAndBluetooth() {
+//        String[] permissionsList;
+//        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S)
+//        {
+//            permissionsList = new String[] { Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO, Manifest.permission.BLUETOOTH_CONNECT };
+//        } else {
+//            permissionsList = new String[] {Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO};
+//        }
+//
+//        requestPermissions(permissionsList);
+//    }
 
 
     /**
@@ -247,6 +286,9 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
         getWindowManager().getDefaultDisplay().getMetrics(displaymetrics);
         int height = mCameraView.getHeight();
         int width = mCameraView.getWidth();
+
+        //cameraHeight = height;
+        //cameraWidth = width;
 
         int left, right, top, bottom, diameter;
 
@@ -260,7 +302,6 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
 
         canvas = holder.lockCanvas();
         canvas.drawColor(0, PorterDuff.Mode.CLEAR);
-
         //border's properties
         paint = new Paint();
         paint.setStyle(Paint.Style.STROKE);
@@ -276,7 +317,6 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
         yOffset = top;
         boxHeight = bottom - top;
         boxWidth = right - left;
-
         //Changing the value of x in diameter/x will change the size of the box ; inversely proportionate to x
         canvas.drawRect(left, top, right, bottom, paint);
         holder.unlockCanvasAndPost(canvas);
@@ -285,6 +325,7 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
     /**
      * Callback functions for the surface Holder
      */
+
     @Override
     public void surfaceCreated(SurfaceHolder holder) {
 
